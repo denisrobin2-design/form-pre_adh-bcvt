@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#146C43">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <title>Formulaire Email</title>
+  <style>
+    :root { --bg:#0b1720; --card:#12232f; --accent:#146C43; --text:#e8f1f2; --muted:#9fb3c8; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1720 0%, #0e1d28 100%); color:var(--text);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card{
+      width:100%; max-width:460px; background:var(--card);
+      border-radius:18px; padding:22px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.05);
+    }
+    h1{font-size:1.25rem; margin:0 0 14px}
+    p.sub{margin:0 0 18px; color:var(--muted); font-size:.95rem}
+    label{display:block; font-weight:600; margin:14px 0 6px}
+    input{width:100%; padding:12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+      background:#0e1f2a; color:var(--text); outline:none; font-size:1rem}
+    input::placeholder{color:#7e93aa}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    button{
+      width:100%; margin-top:16px; padding:14px 16px; border:0; border-radius:14px; cursor:pointer;
+      font-weight:700; font-size:1rem; color:white; background:var(--accent);
+      box-shadow: 0 6px 16px rgba(20,108,67,.35);
+    }
+    button:disabled{opacity:.5; cursor:not-allowed}
+    .note{font-size:.85rem; color:var(--muted); margin-top:10px}
+    .ok{color:#9AF3C9}
+    .err{color:#ffb4b4}
+    footer{margin-top:14px; text-align:center; font-size:.8rem; color:var(--muted)}
+    .install { margin-top:10px; font-size:.9rem; }
+    .install a{ color:#9AF3C9; text-decoration:none; border-bottom:1px dashed #9AF3C9 }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Envoyer mes informations</h1>
+    <p class="sub">Renseigne le formulaire, puis appuie sur <b>Envoyer</b>. Ton app e-mail s’ouvrira avec le message prérempli.</p>
+
+    <div class="row">
+      <div>
+        <label for="prenom">Prénom</label>
+        <input id="prenom" type="text" placeholder="Ex. Marie" autocomplete="given-name" required>
+      </div>
+      <div>
+        <label for="nom">Nom</label>
+        <input id="nom" type="text" placeholder="Ex. Dupont" autocomplete="family-name" required>
+      </div>
+    </div>
+
+    <label for="naissance">Date de naissance</label>
+    <input id="naissance" type="date" inputmode="none" required>
+
+    <label for="email">Adresse e-mail</label>
+    <input id="email" type="email" placeholder="exemple@domaine.fr" autocomplete="email" required>
+
+    <label for="ville">Ville d'habitation</label>
+    <input id="ville" type="text" placeholder="Ex. Lyon" autocomplete="address-level2" required>
+
+    <button id="sendBtn">Envoyer</button>
+    <div class="note" id="msg"></div>
+    <div class="install">
+      <details>
+        <summary>Installer sur l'écran d'accueil</summary>
+        <p>Android : menu ⋮ → <i>Installer l’application</i> ou <i>Ajouter à l’écran d’accueil</i>.<br>
+           iPhone (Safari) : bouton <b>Partager</b> → <i>Sur l’écran d’accueil</i>.</p>
+      </details>
+    </div>
+    <footer>Mode hors-ligne : activé (PWA)</footer>
+  </main>
+
+  <script>
+    // ==== PARAMÈTRES À PERSONNALISER ====
+    const DEST_EMAIL = "denis.robin2@gmail.com"; // ← Mets ici l’adresse de réception unique
+    const SUBJECT = "Fiche d'inscription";
+
+    // ==== ENREGISTREMENT SW ====
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+
+    // ==== LOGIQUE FORMULAIRE ====
+    const qs = sel => document.querySelector(sel);
+    const msg = qs('#msg');
+    const btn = qs('#sendBtn');
+
+    function isEmailValid(s){
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    }
+
+    function formatBody(data){
+      return [
+        "Nom: " + data.nom,
+        "Prénom: " + data.prenom,
+        "Date de naissance: " + data.naissance,
+        "Email: " + data.email,
+        "Ville: " + data.ville
+      ].join("\n");
+    }
+
+    btn.addEventListener('click', () => {
+      const data = {
+        prenom: qs('#prenom').value.trim(),
+        nom: qs('#nom').value.trim(),
+        naissance: qs('#naissance').value,
+        email: qs('#email').value.trim(),
+        ville: qs('#ville').value.trim()
+      };
+
+      // validations
+      if (!data.prenom || !data.nom || !data.naissance || !data.email || !data.ville){
+        msg.textContent = "Merci de compléter tous les champs.";
+        msg.className = "note err";
+        return;
+      }
+      if (!isEmailValid(data.email)){
+        msg.textContent = "L’adresse e-mail saisie n’est pas valide.";
+        msg.className = "note err";
+        return;
+      }
+
+      // mailto
+      const body = encodeURIComponent(formatBody(data));
+      const subject = encodeURIComponent(SUBJECT);
+      const link = `mailto:${encodeURIComponent(DEST_EMAIL)}?subject=${subject}&body=${body}`;
+
+      msg.textContent = "Ouverture de ton application e-mail…";
+      msg.className = "note ok";
+
+      // Rediriger vers lien mailto
+      window.location.href = link;
+    });
+  </script>
+</body>
+</html>
