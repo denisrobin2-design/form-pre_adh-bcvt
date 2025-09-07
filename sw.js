@@ -1,5 +1,5 @@
 // Simple offline cache for PWA
-const CACHE_NAME = 'form-email-pwa-v1';
+const CACHE_NAME = 'form-email-pwa-v2';
 const ASSETS = [
   './',
   './index.html',

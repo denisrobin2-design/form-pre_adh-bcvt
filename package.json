@@ -1,0 +1,12 @@
+{
+  "name": "form-email-pwa-netlify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step'"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.11"
+  }
+}

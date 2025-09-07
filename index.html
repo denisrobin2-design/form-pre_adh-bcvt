@@ -48,7 +48,7 @@
 <body>
   <main class="card">
     <h1>Envoyer mes informations</h1>
-    <p class="sub">Renseigne le formulaire, puis appuie sur <b>Envoyer</b>. Ton app e-mail s’ouvrira avec le message prérempli.</p>
+    <p class="sub">Renseigne le formulaire, puis appuie sur <b>Envoyer</b>. L'app enverra l'email directement, sans ouvrir ta boîte mail.</p>
 
     <div class="row">
       <div>
@@ -83,67 +83,50 @@
   </main>
 
   <script>
-    // ==== PARAMÈTRES À PERSONNALISER ====
-    const DEST_EMAIL = "denis.robin2@gmail.com"; // ← Mets ici l’adresse de réception unique
-    const SUBJECT = "Fiche d'inscription";
-
-    // ==== ENREGISTREMENT SW ====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js');
       });
     }
 
-    // ==== LOGIQUE FORMULAIRE ====
-    const qs = sel => document.querySelector(sel);
-    const msg = qs('#msg');
+    const qs = s => document.querySelector(s);
     const btn = qs('#sendBtn');
+    const msg = qs('#msg');
 
-    function isEmailValid(s){
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-    }
+    function isEmailValid(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
 
-    function formatBody(data){
-      return [
-        "Nom: " + data.nom,
-        "Prénom: " + data.prenom,
-        "Date de naissance: " + data.naissance,
-        "Email: " + data.email,
-        "Ville: " + data.ville
-      ].join("\n");
-    }
-
-    btn.addEventListener('click', () => {
-      const data = {
-        prenom: qs('#prenom').value.trim(),
-        nom: qs('#nom').value.trim(),
+    btn.addEventListener('click', async () => {
+      const body = {
+        prenom:  qs('#prenom').value.trim(),
+        nom:     qs('#nom').value.trim(),
         naissance: qs('#naissance').value,
-        email: qs('#email').value.trim(),
-        ville: qs('#ville').value.trim()
+        email:   qs('#email').value.trim(),
+        ville:   qs('#ville').value.trim(),
+        website: '' // honeypot
       };
 
-      // validations
-      if (!data.prenom || !data.nom || !data.naissance || !data.email || !data.ville){
-        msg.textContent = "Merci de compléter tous les champs.";
-        msg.className = "note err";
-        return;
+      if (!body.prenom || !body.nom || !body.naissance || !body.email || !body.ville){
+        msg.textContent = "Merci de compléter tous les champs."; msg.className = "note err"; return;
       }
-      if (!isEmailValid(data.email)){
-        msg.textContent = "L’adresse e-mail saisie n’est pas valide.";
-        msg.className = "note err";
-        return;
+      if (!isEmailValid(body.email)){
+        msg.textContent = "L’adresse e-mail n’est pas valide."; msg.className = "note err"; return;
       }
 
-      // mailto
-      const body = encodeURIComponent(formatBody(data));
-      const subject = encodeURIComponent(SUBJECT);
-      const link = `mailto:${encodeURIComponent(DEST_EMAIL)}?subject=${subject}&body=${body}`;
-
-      msg.textContent = "Ouverture de ton application e-mail…";
-      msg.className = "note ok";
-
-      // Rediriger vers lien mailto
-      window.location.href = link;
+      try {
+        const r = await fetch('/.netlify/functions/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (r.ok) {
+          msg.textContent = "Envoyé ✔️"; msg.className = "note ok";
+        } else {
+          const t = await r.text();
+          msg.textContent = "Échec de l’envoi : " + t; msg.className = "note err";
+        }
+      } catch (e) {
+        msg.textContent = "Erreur réseau : " + e.message; msg.className = "note err";
+      }
     });
   </script>
 </body>
